@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!--
+  form.html
+  Purpose:
+  - Second step of the flow: index.html -> form.html -> portfolio.html
+  - Collects detailed portfolio information (summary, skills, experience, projects, education, etc.)
+  - Professional photo is uploaded here and converted to base64 by form-script.js
+  - On Generate Portfolio, data is saved to sessionStorage so portfolio.html can render it
+  - Validate button calls backend AI (/analyze-profile) and shows suggestions under fields
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Portfolio Generator - Advanced FSD Project</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Load Inter font from Google Fonts for consistent typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Main wrapper element that centers the form content -->
+    <div class="wrapper">
+        <!-- Main centered container holding the full multi-section form UI -->
+        <div class="form-container">
+            <!-- Back button to navigate to the previous page (index.html) -->
+            <a href="index.html" class="btn-back">← Back to Home</a>
+
+            <!-- User Basic Info Display -->
+            <!-- Container to display user's basic information (name, email, field) -->
+            <div class="user-info-display" id="userInfoDisplay" style="display: none;">
+                <div class="user-info-content">
+                    <h3>👤 Welcome back!</h3>
+                    <div class="user-details">
+                        <p><strong>Name:</strong> <span id="displayName"></span></p>
+                        <p><strong>Email:</strong> <span id="displayEmail"></span></p>
+                        <p><strong>Field:</strong> <span id="displayField"></span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- The actual form that contains all user-editable inputs -->
+            <form id="portfolioForm">
+                <!-- Header Box -->
+                <!-- Container for the form header, including the title and progress indicator -->
+                <div class="form-header-box">
+                    <h2>✨ Create Your Professional Portfolio</h2>
+                    
+                    <!-- Progress Indicator -->
+                    <!-- Visual indicator of the form's completion progress -->
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <span class="progress-text" id="progressText">0% Complete</span>
+                    </div>
+                </div>
+
+                <!-- Two Panel Layout -->
+                <!-- Two panel layout: left = contact + photo + summary/skills, right = experience/projects/education/etc -->
+                <div class="form-layout">
+                    <!-- Left Panel -->
+                    <!-- Left panel: contact links, photo upload, summary, skills -->
+                    <div class="form-panel-left">
+                        <!-- Contact Information -->
+                        <!-- Contact information section -->
+                        <div class="form-section">
+                            <h3>📱 Contact Information</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Phone Number <span class="optional">(Optional)</span></label>
+                                    <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567">
+                                    <span class="field-hint">Include country code for international numbers</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Location <span class="optional">(Optional)</span></label>
+                                    <input type="text" id="location" name="location" placeholder="San Francisco, CA">
+                                    <span class="field-hint">City, State/Country</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Social Media & Web Links -->
+                        <div class="form-section">
+                            <h3>🌐 Professional Profiles</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>LinkedIn <span class="optional">(Optional)</span></label>
+                                    <input type="url" id="linkedin" name="linkedin" placeholder="https://linkedin.com/in/yourprofile">
+                                    <span class="field-hint">Full profile URL</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>GitHub <span class="optional">(Optional)</span></label>
+                                    <input type="url" id="github" name="github" placeholder="https://github.com/yourprofile">
+                                    <span class="field-hint">Showcase your code</span>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Twitter/X <span class="optional">(Optional)</span></label>
+                                    <input type="url" id="twitter" placeholder="https://twitter.com/yourprofile">
+                                    <span class="field-hint">Professional Twitter handle</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Personal Website <span class="optional">(Optional)</span></label>
+                                    <input type="url" id="website" placeholder="https://yourwebsite.com">
+                                    <span class="field-hint">Portfolio or personal site</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Professional Photo -->
+                        <div class="form-section">
+                            <h3>📸 Professional Photo</h3>
+                            <div class="form-group">
+                                <label>Upload Photo <span class="required">*</span></label>
+                                <div class="file-upload-container">
+                                    <input type="file" id="photo" name="photo" accept="image/*" class="file-input" required>
+                                    <label for="photo" class="file-upload-label">
+                                        <span class="upload-icon">📷</span>
+                                        <span class="upload-text">Choose professional photo</span>
+                                        <span class="upload-hint">JPG, PNG up to 5MB</span>
+                                    </label>
+                                    <div id="photoPreview" class="photo-preview" style="display: none;">
+                                        <img id="photoPreviewImg" src="" alt="Preview">
+                                        <button type="button" class="remove-photo" id="removePhoto">✕</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Professional Summary -->
+                        <div class="form-section">
+                            <h3>📝 Professional Summary</h3>
+                            <div class="form-group">
+                                <label>About You <span class="required">*</span></label>
+                                <textarea id="about" name="about" rows="4" placeholder="Write a compelling summary about your professional background, expertise, and career goals..." required></textarea>
+                                <div class="char-counter">
+                                    <span id="aboutCharCount">0</span>/500 characters
+                                </div>
+                                <span class="field-hint">Focus on your unique value proposition and key achievements</span>
+                            </div>
+                        </div>
+
+                        <!-- Skills -->
+                        <div class="form-section">
+                            <h3>💼 Technical Skills</h3>
+                            <div class="form-group">
+                                <label>Skills <span class="required">*</span></label>
+                                <textarea id="skills" name="skills" rows="3" placeholder="JavaScript, React, Node.js, Python, AWS, Docker..." required></textarea>
+                                <div class="skill-tags" id="skillTags"></div>
+                                <span class="field-hint">Separate with commas. Include both technical and soft skills.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel -->
+                    <!-- Right panel: experience, projects, education, certifications, testimonials -->
+                    <div class="form-panel-right">
+                        <!-- Experience -->
+                        <div class="form-section">
+                            <h3>🏢 Work Experience</h3>
+                            <div class="form-group">
+                                <label>Professional Experience <span class="required">*</span></label>
+                                <textarea id="experience" name="experience" rows="5" placeholder="Senior Frontend Developer | Tech Corp Inc. | Jan 2022 - Present&#10;• Led development of enterprise web applications&#10;• Improved performance by 40% through optimization&#10;• Mentored team of 5 junior developers
+
+---
+
+Frontend Developer | StartupXYZ | Jun 2020 - Dec 2021&#10;• Built responsive web applications using React&#10;• Collaborated with UX team to implement designs" required></textarea>
+                                <span class="field-hint">Format: Job Title | Company | Duration. Use --- to separate multiple positions. Use bullet points (•) for achievements.</span>
+                            </div>
+                        </div>
+
+                        <!-- Projects -->
+                        <div class="form-section">
+                            <h3>🚀 Featured Projects</h3>
+                            <div class="form-group">
+                                <label>Projects <span class="required">*</span></label>
+                                <textarea id="projects" name="projects" rows="5" placeholder="E-Commerce Platform | Full-stack web application with React and Node.js | https://github.com/user/ecommerce&#10;• Implemented real-time inventory management&#10;• Integrated payment gateway with Stripe&#10;• Achieved 99.9% uptime
+
+---
+
+Task Management App | Collaborative project management tool | https://projectdemo.com&#10;• Built with React, TypeScript, and GraphQL&#10;• Real-time collaboration features&#10;• 10,000+ active users" required></textarea>
+                                <span class="field-hint">Format: Project Name | Description | Live Link. Use --- to separate projects.</span>
+                            </div>
+                        </div>
+
+                        <!-- Education -->
+                        <div class="form-section">
+                            <h3>🎓 Education</h3>
+                            <div class="form-group">
+                                <label>Educational Background <span class="required">*</span></label>
+                                <textarea id="education" name="education" rows="4" placeholder="Bachelor of Science in Computer Science | Stanford University | 2016 - 2020&#10;• GPA: 3.8/4.0, Dean's List&#10;• Relevant coursework: Data Structures, Algorithms, Web Development
+
+---
+
+Full Stack Web Development Bootcamp | Coding Academy | 2021&#10;• Intensive 6-month program&#10;• Specialized in MERN stack" required></textarea>
+                                <span class="field-hint">Format: Degree | Institution | Years. Use --- for multiple degrees.</span>
+                            </div>
+                        </div>
+
+                        <!-- Certifications -->
+                        <div class="form-section">
+                            <h3>🏆 Certifications & Awards</h3>
+                            <div class="form-group">
+                                <label>Professional Certifications <span class="optional">(Optional)</span></label>
+                                <textarea id="certifications" name="certifications" rows="3" placeholder="AWS Certified Solutions Architect | Amazon Web Services | 2023
+
+Google Cloud Professional | Google | 2022
+
+Employee of the Year | Tech Corp Inc. | 2022"></textarea>
+                                <span class="field-hint">Format: Certification Name | Issuing Organization | Year</span>
+                            </div>
+                        </div>
+
+                        <!-- Testimonials -->
+                        <div class="form-section">
+                            <h3>💬 Professional Testimonials</h3>
+                            <div class="form-group">
+                                <label>Recommendations <span class="optional">(Optional)</span></label>
+                                <textarea id="testimonials" name="testimonials" rows="4" placeholder="John is an exceptional developer who consistently delivers high-quality work. His attention to detail and problem-solving skills are outstanding. - Jane Smith, CTO at Tech Corp
+
+Working with John was a great experience. He brought innovative solutions to our team and was instrumental in project success. - Mike Johnson, Project Manager"></textarea>
+                                <span class="field-hint">Include quotes from colleagues, managers, or clients</span>
+                            </div>
+                        </div>
+
+                        <!-- Real-time Preview Section -->
+                        <!-- Live preview: shows a quick preview of key sections (toggled by JS) -->
+                        <div class="preview-section" id="previewSection" style="display: none;">
+                            <h3>👁️ Live Preview</h3>
+                            <div class="preview-toggle">
+                                <button type="button" id="togglePreview" class="btn-preview">Show Preview</button>
+                            </div>
+                            <div id="livePreview" class="live-preview" style="display: none;">
+                                <!-- Preview content will be dynamically generated -->
+                            </div>
+                        </div>
+
+                        <!-- Validation Messages -->
+                        <div id="validationMessages" class="validation-messages" style="display: none;"></div>
+                    </div>
+                </div>
+            </form>
+            
+            <!-- Button box at bottom:
+                 - Save Draft: stores current values to localStorage
+                 - Clear Form: resets the form
+                 - Validate: calls backend AI to show suggestions under inputs
+                 - Auto Fill Example: fills with sample content
+                 - Generate Portfolio: saves sessionStorage and redirects to portfolio.html
+            -->
+            <!-- Button Box at Bottom -->
+            <div class="button-box">
+                <div class="button-row">
+                    <button type="button" id="saveDraft" class="btn-secondary">💾 Save Draft</button>
+                    <button type="button" id="clearForm" class="btn-secondary">🗑️ Clear Form</button>
+                    <button type="button" id="validateForm" class="btn-secondary">✅ Validate</button>
+                    <button type="button" id="autoFillExample" class="btn-secondary">📝 Auto Fill Example</button>
+                </div>
+                <div class="generate-button-container">
+                    <button type="submit" class="btn-submit">🚀 Generate Portfolio</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="form-script.js"></script>
+    <script src="ai-enhancer.js"></script>
+</body>
+</html>

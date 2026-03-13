@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!--
+  index.html
+  Purpose:
+  - First step of the 3-page flow: index.html -> form.html -> portfolio.html
+  - Collects basic identity information (name, job role, email)
+  - Saves it into sessionStorage under the key `portfolioBasic`
+  - Redirects the user to form.html for the detailed portfolio sections
+-->
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engineering Portfolio Generator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Outer layout wrapper used by style.css for centering and background effects -->
+  <div class="wrapper">
+    <!-- Main card contains left marketing area + right input form -->
+    <div class="card">
+      <!-- Left panel: heading and brief description -->
+      <div class="left">
+        <h1>Build your<br>engineering portfolio</h1>
+        <p class="sub-label">Engineering & Technical Portfolio Generator</p>
+      </div>
+
+      <!-- Right panel: basic details form -->
+      <div class="right">
+        <form id="basicForm">
+          <p class="form-header">Provide your basic details to generate your engineering portfolio.</p>
+
+          <p class="form-text">
+            Full name <input type="text" id="name" placeholder="Your full professional name" required> and I am a <input type="text"
+              id="field" placeholder="SOFTWARE ENGINEER, MECHANICAL ENGINEER, DATA ENGINEER" required>
+          </p>
+
+          <p class="form-text">
+            Professional email address <input type="email" id="email" placeholder="your.email@domain.com" required>
+          </p>
+
+          <button type="submit">Continue to Portfolio Setup</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Handles basic form submission.
+    // - Validates user input
+    // - Optionally calls backend role validation
+    // - Stores the result in sessionStorage
+    // - Navigates to form.html
+    document.getElementById("basicForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      // Read current input values from the DOM.
+      const name = document.getElementById("name").value.trim();
+      const field = document.getElementById("field").value.trim();
+      const email = document.getElementById("email").value.trim();
+      
+      // Validation
+      let isValid = true;
+      let errorMessage = "";
+      
+      if (!name) {
+        errorMessage = "Please enter your full name.";
+        isValid = false;
+      } else if (name.length < 2) {
+        errorMessage = "Name must be at least 2 characters long.";
+        isValid = false;
+      } else if (!field) {
+        errorMessage = "Please enter your professional title.";
+        isValid = false;
+      } else if (field.length < 2) {
+        errorMessage = "Professional title must be at least 2 characters long.";
+        isValid = false;
+      } else if (!email) {
+        errorMessage = "Please enter your email address.";
+        isValid = false;
+      } else if (!isValidEmail(email)) {
+        errorMessage = "Please enter a valid email address.";
+        isValid = false;
+      }
+      
+      if (!isValid) {
+        // Show error message
+        const existingError = document.querySelector(".error-message");
+        if (existingError) {
+          existingError.remove();
+        }
+        
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "error-message";
+        errorDiv.textContent = errorMessage;
+        errorDiv.style.cssText = `
+          background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 142, 83, 0.2));
+          border: 1px solid rgba(255, 107, 107, 0.5);
+          color: #ff6b6b;
+          padding: 12px 20px;
+          border-radius: 8px;
+          margin-top: 20px;
+          font-size: 14px;
+          font-weight: 600;
+          text-align: center;
+          animation: shake 0.5s ease-in-out;
+        `;
+        
+        // Add shake animation
+        if (!document.querySelector("#error-styles")) {
+          const style = document.createElement("style");
+          style.id = "error-styles";
+          style.textContent = `
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-10px); }
+              75% { transform: translateX(10px); }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        document.getElementById("basicForm").appendChild(errorDiv);
+        
+        // Remove error after 5 seconds
+        setTimeout(() => {
+          if (errorDiv.parentNode) {
+            errorDiv.remove();
+          }
+        }, 5000);
+        
+        return;
+      }
+      
+      // Validate engineering role with AI
+      console.log('Starting engineering role validation for:', field);
+      try {
+        const validationResponse = await fetch('http://localhost:3001/validate-engineering-role', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ role: field })
+        });
+        
+        console.log('Validation response status:', validationResponse.status);
+        
+        if (!validationResponse.ok) {
+          throw new Error(`HTTP error! status: ${validationResponse.status}`);
+        }
+        
+        const validationResult = await validationResponse.json();
+        console.log('Validation result:', validationResult);
+        
+        if (!validationResult.isEngineering) {
+          console.log('Role is not engineering-related, showing error');
+          // Show engineering role validation error
+          const existingError = document.querySelector(".error-message");
+          if (existingError) {
+            existingError.remove();
+          }
+          
+          const errorDiv = document.createElement("div");
+          errorDiv.className = "error-message";
+          errorDiv.textContent = validationResult.message;
+          errorDiv.style.cssText = `
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 142, 83, 0.2));
+            border: 1px solid rgba(255, 107, 107, 0.5);
+            color: #ff6b6b;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            animation: shake 0.5s ease-in-out;
+          `;
+          
+          // Add shake animation if not already added
+          if (!document.querySelector("#error-styles")) {
+            const style = document.createElement("style");
+            style.id = "error-styles";
+            style.textContent = `
+              @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-10px); }
+                75% { transform: translateX(10px); }
+              }
+            `;
+            document.head.appendChild(style);
+          }
+          
+          document.getElementById("basicForm").appendChild(errorDiv);
+          
+          // Remove error after 5 seconds
+          setTimeout(() => {
+            if (errorDiv.parentNode) {
+              errorDiv.remove();
+            }
+          }, 5000);
+          
+          return; // Stay on the same page
+        } else {
+          console.log('Role is engineering-related, proceeding to form.html');
+        }
+        
+      } catch (error) {
+        console.error('Error validating engineering role:', error);
+        // Show connection error message
+        const existingError = document.querySelector(".error-message");
+        if (existingError) {
+          existingError.remove();
+        }
+        
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "error-message";
+        errorDiv.textContent = "Unable to validate role. Please ensure the backend server is running on localhost:3001";
+        errorDiv.style.cssText = `
+          background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 142, 83, 0.2));
+          border: 1px solid rgba(255, 107, 107, 0.5);
+          color: #ff6b6b;
+          padding: 12px 20px;
+          border-radius: 8px;
+          margin-top: 20px;
+          font-size: 14px;
+          font-weight: 600;
+          text-align: center;
+          animation: shake 0.5s ease-in-out;
+        `;
+        
+        document.getElementById("basicForm").appendChild(errorDiv);
+        
+        setTimeout(() => {
+          if (errorDiv.parentNode) {
+            errorDiv.remove();
+          }
+        }, 5000);
+        
+        return; // Stay on the same page if validation fails
+      }
+      
+      // Clear any existing errors
+      const existingError = document.querySelector(".error-message");
+      if (existingError) {
+        existingError.remove();
+      }
+      
+      sessionStorage.setItem("portfolioBasic", JSON.stringify({ name, field, email }));
+      window.location.href = "form.html";
+    });
+    
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+    
+    // Add input validation feedback
+    document.getElementById("name").addEventListener("input", function() {
+      if (this.value.trim().length >= 2) {
+        this.style.borderColor = "rgba(76, 175, 80, 0.5)";
+      } else {
+        this.style.borderColor = "rgba(120, 219, 255, 0.2)";
+      }
+    });
+    
+    document.getElementById("field").addEventListener("input", function() {
+      if (this.value.trim().length >= 2) {
+        this.style.borderColor = "rgba(76, 175, 80, 0.5)";
+      } else {
+        this.style.borderColor = "rgba(120, 219, 255, 0.2)";
+      }
+    });
+    
+    document.getElementById("email").addEventListener("input", function() {
+      if (isValidEmail(this.value.trim())) {
+        this.style.borderColor = "rgba(76, 175, 80, 0.5)";
+      } else {
+        this.style.borderColor = "rgba(120, 219, 255, 0.2)";
+      }
+    });
+  </script>
+</body>
+
+</html>

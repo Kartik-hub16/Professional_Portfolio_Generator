@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Engineering Role Validation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            width: 300px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .valid {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .invalid {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .error {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <h1>Engineering Role Validation Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Custom Role</h3>
+        <input type="text" id="roleInput" placeholder="Enter a job role to test">
+        <button onclick="testRole()">Test Role</button>
+        <div id="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Quick Tests</h3>
+        <button onclick="testRole('Software Engineer')">Software Engineer</button>
+        <button onclick="testRole('Marketing Manager')">Marketing Manager</button>
+        <button onclick="testRole('Mechanical Engineer')">Mechanical Engineer</button>
+        <button onclick="testRole('Data Scientist')">Data Scientist</button>
+        <button onclick="testRole('MBA Student')">MBA Student</button>
+        <button onclick="testRole('Web Developer')">Web Developer</button>
+    </div>
+
+    <script>
+        async function testRole(role) {
+            const roleInput = document.getElementById('roleInput');
+            const resultDiv = document.getElementById('result');
+            
+            if (role) {
+                roleInput.value = role;
+            } else {
+                role = roleInput.value.trim();
+            }
+            
+            if (!role) {
+                resultDiv.innerHTML = '<div class="error">Please enter a role to test</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="result">Testing...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:3001/validate-engineering-role', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ role: role })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.isEngineering) {
+                    resultDiv.innerHTML = `<div class="result valid">✅ ${role} - ${result.message}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result invalid">❌ ${role} - ${result.message}</div>`;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<div class="result error">❌ Error testing role: ${error.message}. Make sure the backend server is running on localhost:3001</div>`;
+            }
+        }
+        
+        // Test on Enter key
+        document.getElementById('roleInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testRole();
+            }
+        });
+    </script>
+</body>
+</html>

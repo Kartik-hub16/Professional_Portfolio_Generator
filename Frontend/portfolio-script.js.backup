@@ -1,0 +1,1688 @@
+// Enhanced Professional Portfolio Script
+class ProfessionalPortfolio {
+    constructor() {
+        this.data = null;
+        this.particles = [];
+        this.init();
+    }
+
+    init() {
+        this.loadData();
+        if (this.data) {
+            this.renderPortfolio();
+            this.initializeAnimations();
+            this.setupEventListeners();
+            this.createParticles();
+            this.setupSmoothScrolling();
+            this.setupIntersectionObserver();
+        } else {
+            this.showNoDataMessage();
+        }
+    }
+
+    // Load portfolio data
+    loadData() {
+        try {
+            // Try to get data from sessionStorage (from form submission)
+            let storedData = sessionStorage.getItem("portfolioData");
+            
+            // If not in sessionStorage, try localStorage (for backward compatibility)
+            if (!storedData) {
+                storedData = localStorage.getItem("portfolio");
+            }
+            
+            // Also try to get generated portfolio from backend
+            if (!storedData) {
+                storedData = sessionStorage.getItem("generatedPortfolio");
+            }
+            
+            if (storedData) {
+                this.data = JSON.parse(storedData);
+                console.log("Portfolio data loaded successfully:", this.data);
+                
+                // Also load photo data if available
+                const photoData = sessionStorage.getItem("portfolioPhoto");
+                if (photoData) {
+                    this.data.photoData = photoData;
+                }
+            } else {
+                console.log("No portfolio data found in sessionStorage or localStorage");
+            }
+        } catch (error) {
+            console.error("Error loading portfolio data:", error);
+            this.data = null;
+        }
+    }
+
+    // Show no data message
+    showNoDataMessage() {
+        document.body.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Inter', sans-serif;">
+                <div style="text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border-radius: 20px; backdrop-filter: blur(20px);">
+                    <h1 style="color: #667eea; margin-bottom: 20px;">No Portfolio Data Found</h1>
+                    <p style="color: #b8c5d6; margin-bottom: 30px;">Please generate your portfolio first.</p>
+                    <a href="index.html" style="display: inline-block; padding: 15px 30px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-decoration: none; border-radius: 25px; font-weight: 600;">
+                        Go Back to Form
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    // Render portfolio content
+    renderPortfolio() {
+        console.log("Rendering portfolio with data:", this.data);
+        this.renderHeader();
+        this.renderAbout();
+        this.renderSkills();
+        this.renderExperience();
+        this.renderProjects();
+        this.renderEducation();
+        this.renderCertifications();
+        this.renderTestimonials();
+        
+        // Ensure sections are visible after rendering
+        setTimeout(() => {
+            this.ensureSectionsVisible();
+        }, 100);
+    }
+
+    // Render header section
+    renderHeader() {
+        const nameEl = document.getElementById('name');
+        const fieldEl = document.getElementById('field');
+        const emailEl = document.getElementById('email');
+        const phoneEl = document.getElementById('phone');
+        const locationEl = document.getElementById('location');
+        const phoneItem = document.getElementById('phoneItem');
+        const locationItem = document.getElementById('locationItem');
+        const socialLinks = document.getElementById('socialLinks');
+        const headerPhoto = document.getElementById('headerPhoto');
+        const photoImg = document.getElementById('photoImg');
+
+        if (nameEl) nameEl.textContent = this.data.name || 'Your Name';
+        if (fieldEl) fieldEl.textContent = this.data.field || 'Your Professional Title';
+        if (emailEl) emailEl.textContent = this.data.email || 'your.email@example.com';
+
+        // Phone
+        if (this.data.phone && phoneEl) {
+            phoneEl.textContent = this.data.phone;
+            if (phoneItem) phoneItem.style.display = 'block';
+        }
+
+        // Location
+        if (this.data.location && locationEl) {
+            locationEl.textContent = this.data.location;
+            if (locationItem) locationItem.style.display = 'block';
+        }
+
+        // Social links (hidden in new design)
+        if (socialLinks) {
+            socialLinks.style.display = 'none';
+        }
+
+        // Professional photo
+        if (this.data.photoData && headerPhoto && photoImg) {
+            photoImg.src = this.data.photoData;
+            headerPhoto.style.display = 'block';
+            photoImg.onload = () => {
+                headerPhoto.style.animation = 'fadeInUp 0.8s ease-out 0.5s both';
+            };
+        }
+    }
+
+    // Render about section
+    renderAbout() {
+        const aboutSection = document.getElementById('about');
+        const aboutContent = document.getElementById('aboutContent');
+
+        if (this.data.about && aboutSection && aboutContent) {
+            aboutContent.textContent = this.data.about;
+            aboutSection.style.display = 'block';
+        }
+    }
+
+    // Render skills section
+    renderSkills() {
+        const skillsSection = document.getElementById('skills');
+        const skillsGrid = document.getElementById('skillsList');
+
+        if (this.data.skills && skillsSection && skillsGrid) {
+            const skillsArray = this.data.skills.split(',').map(skill => skill.trim()).filter(skill => skill);
+            
+            skillsArray.forEach((skill, index) => {
+                const skillItem = document.createElement('div');
+                skillItem.className = 'skill-item';
+                skillItem.textContent = this.escapeHtml(skill);
+                skillItem.style.animationDelay = `${index * 0.1}s`;
+                skillsGrid.appendChild(skillItem);
+            });
+
+            skillsSection.style.display = 'block';
+        }
+    }
+
+    // Render experience section
+    renderExperience() {
+        const experienceSection = document.getElementById('experience');
+        const experienceList = document.getElementById('experienceList');
+
+        if (this.data.experience && experienceSection && experienceList) {
+            const experiences = this.data.experience.split('---').map(exp => exp.trim()).filter(exp => exp);
+            
+            experiences.forEach((exp, index) => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+                
+                // Parse experience data
+                const lines = exp.split('\n').filter(line => line.trim());
+                const titleLine = lines[0] || '';
+                const titleParts = titleLine.split('|').map(part => part.trim());
+                
+                let title = titleParts[0] || 'Position';
+                let company = titleParts[1] || 'Company';
+                let duration = titleParts[2] || 'Duration';
+                
+                let bulletPoints = lines.slice(1).filter(line => line.trim().startsWith('•'));
+                
+                timelineItem.innerHTML = `
+                    <h3>${this.escapeHtml(title)}</h3>
+                    <div class="timeline-meta">${this.escapeHtml(company)} | ${this.escapeHtml(duration)}</div>
+                    <div>${bulletPoints.map(point => `<p>${this.escapeHtml(point)}</p>`).join('')}</div>
+                `;
+                
+                timelineItem.style.animationDelay = `${index * 0.15}s`;
+                experienceList.appendChild(timelineItem);
+            });
+
+            experienceSection.style.display = 'block';
+        }
+    }
+
+    // Render projects section
+    renderProjects() {
+        const projectsSection = document.getElementById('projects');
+        const projectsList = document.getElementById('projectsList');
+
+        if (this.data.projects && projectsSection && projectsList) {
+            const projects = this.data.projects.split('---').map(proj => proj.trim()).filter(proj => proj);
+            
+            projects.forEach((proj, index) => {
+                const projectItem = document.createElement('div');
+                projectItem.className = 'project-item';
+                
+                // Parse project data
+                const lines = proj.split('\n').filter(line => line.trim());
+                const titleLine = lines[0] || '';
+                const titleParts = titleLine.split('|').map(part => part.trim());
+                
+                let title = titleParts[0] || 'Project';
+                let tech = titleParts[1] || 'Description';
+                let link = titleParts[2] || '';
+                
+                let bulletPoints = lines.slice(1).filter(line => line.trim().startsWith('•'));
+                
+                let linkHTML = link ? `<a href="${link}" target="_blank" class="project-link">
+                    <i class="fas fa-external-link-alt"></i> Live Demo
+                </a>` : '';
+                
+                projectItem.innerHTML = `
+                    <h3>${this.escapeHtml(title)}</h3>
+                    <div class="project-tech">${this.escapeHtml(tech)}</div>
+                    <div>${bulletPoints.map(point => `<p>${this.escapeHtml(point)}</p>`).join('')}</div>
+                    ${linkHTML}
+                `;
+                
+                projectItem.style.animationDelay = `${index * 0.1}s`;
+                projectsList.appendChild(projectItem);
+            });
+
+            projectsSection.style.display = 'block';
+        }
+    }
+
+    // Render education section
+    renderEducation() {
+        const educationSection = document.getElementById('education');
+        const educationList = document.getElementById('educationList');
+
+        if (this.data.education && educationSection && educationList) {
+            const educations = this.data.education.split('---').map(edu => edu.trim()).filter(edu => edu);
+            
+            educations.forEach((edu, index) => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+                
+                // Parse education data
+                const lines = edu.split('\n').filter(line => line.trim());
+                const titleLine = lines[0] || '';
+                const titleParts = titleLine.split('|').map(part => part.trim());
+                
+                let degree = titleParts[0] || 'Degree';
+                let institution = titleParts[1] || 'Institution';
+                let years = titleParts[2] || 'Years';
+                
+                let details = lines.slice(1).filter(line => line.trim().startsWith('•'));
+                
+                timelineItem.innerHTML = `
+                    <h3>${this.escapeHtml(degree)}</h3>
+                    <div class="timeline-meta">${this.escapeHtml(institution)} | ${this.escapeHtml(years)}</div>
+                    <div>${details.map(detail => `<p>${this.escapeHtml(detail)}</p>`).join('')}</div>
+                `;
+                
+                timelineItem.style.animationDelay = `${index * 0.15}s`;
+                educationList.appendChild(timelineItem);
+            });
+
+            educationSection.style.display = 'block';
+        }
+    }
+
+    // Render certifications section
+    renderCertifications() {
+        const certificationsSection = document.getElementById('certifications');
+        const certificationsList = document.getElementById('certificationsList');
+
+        if (this.data.certifications && certificationsSection && certificationsList) {
+            const certifications = this.data.certifications.split('\n').map(cert => cert.trim()).filter(cert => cert);
+            
+            certifications.forEach((cert, index) => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = 'timeline-item';
+                
+                // Parse certification data
+                const parts = cert.split('|').map(part => part.trim());
+                let name = parts[0] || 'Certification';
+                let issuer = parts[1] || 'Issuer';
+                let year = parts[2] || 'Year';
+                
+                timelineItem.innerHTML = `
+                    <h3>${this.escapeHtml(name)}</h3>
+                    <div class="timeline-meta">${this.escapeHtml(issuer)} | ${this.escapeHtml(year)}</div>
+                `;
+                
+                timelineItem.style.animationDelay = `${index * 0.15}s`;
+                certificationsList.appendChild(timelineItem);
+            });
+
+            certificationsSection.style.display = 'block';
+        }
+    }
+
+    // Render testimonials section
+    renderTestimonials() {
+        const testimonialsSection = document.getElementById('testimonials');
+        const testimonialsList = document.getElementById('testimonialsList');
+
+        if (this.data.testimonials && testimonialsSection && testimonialsList) {
+            const testimonials = this.data.testimonials.split('\n').map(testimonial => testimonial.trim()).filter(testimonial => testimonial);
+            
+            testimonials.forEach((testimonial, index) => {
+                const testimonialItem = document.createElement('div');
+                testimonialItem.className = 'testimonial-item';
+                
+                // Parse testimonial
+                const parts = testimonial.split('-').map(part => part.trim());
+                let quote = parts[0] || 'Testimonial';
+                let author = parts[1] || 'Author';
+                
+                testimonialItem.innerHTML = `
+                    <p>${this.escapeHtml(quote)}</p>
+                    <div class="testimonial-author">— ${this.escapeHtml(author)}</div>
+                `;
+                
+                testimonialItem.style.animationDelay = `${index * 0.2}s`;
+                testimonialsList.appendChild(testimonialItem);
+            });
+
+            testimonialsSection.style.display = 'block';
+        }
+    }
+
+    // Escape HTML to prevent XSS
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initialize animations
+    initializeAnimations() {
+        // Add typing effect to name
+        const nameEl = document.getElementById('name');
+        if (nameEl) {
+            const originalText = nameEl.textContent;
+            nameEl.textContent = '';
+            let charIndex = 0;
+            
+            const typeWriter = () => {
+                if (charIndex < originalText.length) {
+                    nameEl.textContent += originalText.charAt(charIndex);
+                    charIndex++;
+                    setTimeout(typeWriter, 50);
+                }
+            };
+            
+            setTimeout(typeWriter, 500);
+        }
+
+        // Add hover effects to interactive elements
+        this.addHoverEffects();
+    }
+
+    // Add hover effects
+    addHoverEffects() {
+        // Skill items 3D tilt effect
+        document.querySelectorAll('.skill-item').forEach(item => {
+            item.addEventListener('mousemove', (e) => {
+                const rect = item.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateX = (y - centerY) / 10;
+                const rotateY = (centerX - x) / 10;
+                
+                item.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+            });
+            
+            item.addEventListener('mouseleave', () => {
+                item.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+            });
+        });
+    }
+
+    // Create animated particles
+    createParticles() {
+        const particlesContainer = document.getElementById('particles');
+        if (!particlesContainer) return;
+
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 15 + 's';
+            particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+            particlesContainer.appendChild(particle);
+        }
+    }
+
+    // Setup smooth scrolling
+    setupSmoothScrolling() {
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(anchor.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    }
+
+    // Setup intersection observer for animations
+    setupIntersectionObserver() {
+        const options = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, options);
+
+        // Observe all sections and items
+        document.querySelectorAll('.section, .timeline-item, .skill-item, .testimonial-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            observer.observe(el);
+        });
+    }
+
+    // Setup event listeners
+    setupEventListeners() {
+        // PDF download
+        const pdfBtn = document.getElementById('downloadPDF');
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', () => this.downloadPDF());
+        }
+
+        // HTML download
+        const htmlBtn = document.getElementById('downloadHTML');
+        if (htmlBtn) {
+            htmlBtn.addEventListener('click', () => this.downloadHTML());
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'p':
+                        e.preventDefault();
+                        this.downloadPDF();
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        this.downloadHTML();
+                        break;
+                }
+            }
+        });
+    }
+
+    // Download PDF functionality
+    async downloadPDF() {
+        const button = document.getElementById('downloadPDF');
+        const originalText = button.innerHTML;
+        
+        try {
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Professional PDF...';
+
+            // Check if we have data
+            if (!this.data) {
+                console.log('No portfolio data found, checking storage...');
+                this.loadData(); // Try to load data again
+                if (!this.data) {
+                    console.log('Still no data, creating sample data for testing...');
+                    this.createSampleData();
+                    if (!this.data) {
+                        this.showNotification('No portfolio data found. Please generate a portfolio first.', 'error');
+                        return;
+                    }
+                }
+            }
+            
+            console.log('Portfolio data for PDF:', this.data);
+
+            // Wait a bit for content to render
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Use the existing portfolio container for PDF
+            const portfolioContainer = document.querySelector('.portfolio-container');
+            const actionBar = document.querySelector('.action-bar');
+            
+            if (!portfolioContainer) {
+                this.showNotification('Portfolio container not found.', 'error');
+                return;
+            }
+            
+            // Hide action bar temporarily
+            if (actionBar) {
+                actionBar.style.display = 'none';
+            }
+            
+            // Clone the container for PDF generation
+            const tempContainer = portfolioContainer.cloneNode(true);
+            tempContainer.style.cssText = `
+                position: absolute;
+                left: -9999px;
+                top: 0;
+                background: white;
+                color: #333;
+                font-family: 'Inter', Arial, sans-serif;
+                display: flex;
+                flex-direction: column;
+                gap: 0;
+                padding: 0;
+            `;
+            
+            // Remove action bar from cloned container
+            const clonedActionBar = tempContainer.querySelector('.action-bar');
+            if (clonedActionBar) {
+                clonedActionBar.remove();
+            }
+            
+            // Ensure all sections are visible in the cloned container
+            const sections = tempContainer.querySelectorAll('.section');
+            sections.forEach(section => {
+                section.style.display = 'block';
+            });
+            
+            // Update A4 pages for PDF
+            const a4Pages = tempContainer.querySelectorAll('.a4-page');
+            a4Pages.forEach(page => {
+                page.style.pageBreakAfter = 'always';
+                page.style.marginBottom = '0';
+                page.style.display = 'flex';
+                page.style.flexDirection = 'column';
+            });
+            
+            document.body.appendChild(tempContainer);
+            
+            // Wait for content to render
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // PDF options optimized for professional printing
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: `${this.data.name.replace(/\s+/g, '_')}_Professional_Portfolio.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    letterRendering: true,
+                    backgroundColor: '#ffffff',
+                    windowWidth: 800,
+                    windowHeight: 1200,
+                    scrollX: 0,
+                    scrollY: 0,
+                    allowTaint: true
+                },
+                jsPDF: { 
+                    orientation: 'portrait', 
+                    unit: 'mm', 
+                    format: 'a4',
+                    compress: true
+                },
+                pagebreak: { 
+                    mode: ['css', 'legacy'],
+                    avoid: ['.section']
+                }
+            };
+
+            // Generate PDF
+            try {
+                await html2pdf()
+                    .set(opt)
+                    .from(tempContainer)
+                    .save();
+            } catch (pdfError) {
+                console.error('PDF generation with container failed, trying fallback:', pdfError);
+                // Fallback: create simple HTML content
+                await this.generatePDFFallback();
+            }
+
+            // Clean up
+            document.body.removeChild(tempContainer);
+            
+            // Show action bar again
+            if (actionBar) {
+                actionBar.style.display = 'flex';
+            }
+
+            this.showNotification('Professional PDF downloaded successfully!', 'success');
+
+        } catch (error) {
+            console.error('PDF generation error:', error);
+            this.showNotification('Error generating PDF. Please try again.', 'error');
+            
+            // Show action bar again in case of error
+            const actionBar = document.querySelector('.action-bar');
+            if (actionBar) {
+                actionBar.style.display = 'flex';
+            }
+        } finally {
+            // Reset button
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+
+    // Create sample data for testing
+    createSampleData() {
+        this.data = {
+            name: "John Doe",
+            field: "Full Stack Developer",
+            email: "john.doe@example.com",
+            phone: "+1 (555) 123-4567",
+            location: "San Francisco, CA",
+            linkedin: "linkedin.com/in/johndoe",
+            github: "github.com/johndoe",
+            about: "Experienced Full Stack Developer with 5+ years of expertise in building scalable web applications. Proficient in modern JavaScript frameworks, cloud technologies, and agile development methodologies. Passionate about creating efficient solutions and leading development teams to deliver high-quality products.",
+            skills: "JavaScript, React, Node.js, Python, MongoDB, PostgreSQL, AWS, Docker, Git, TypeScript, Express.js, Vue.js",
+            experience: "Senior Full Stack Developer|Tech Corp|2020-Present|Led development of microservices architecture that improved system performance by 40%. Mentored junior developers and implemented CI/CD pipelines.---Full Stack Developer|StartupXYZ|2018-2020|Built RESTful APIs and responsive frontends. Collaborated with cross-functional teams to deliver features on tight deadlines.",
+            projects: "E-Commerce Platform|Built a full-stack e-commerce solution with React and Node.js, handling 10k+ daily users|github.com/johndoe/ecommerce---Task Management App|Developed a real-time task management application with WebSocket integration|github.com/johndoe/taskapp",
+            education: "Bachelor of Science in Computer Science|University of California|2014-2018|Graduated Magna Cum Laude with 3.8 GPA. Relevant coursework: Data Structures, Algorithms, Web Development.",
+            certifications: "AWS Certified Solutions Architect|Amazon Web Services|2021|Valid until 2024---Google Cloud Professional Developer|Google Cloud|2022|Valid until 2025",
+            testimonials: "John is an exceptional developer who consistently delivers high-quality code. His problem-solving skills and attention to detail are outstanding.|Sarah Smith, CTO at Tech Corp|Working with John was a great experience. He brings both technical expertise and strong leadership to every project.|Mike Johnson, Project Manager"
+        };
+        
+        // Render the sample data
+        this.renderPortfolio();
+        console.log('Sample data created and rendered');
+    }
+
+    // Fallback PDF generation method
+    async generatePDFFallback() {
+        const pdfContent = this.createProfessionalPDFContent();
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = pdfContent;
+        tempDiv.style.cssText = `
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            width: 800px;
+            background: white;
+            color: #333;
+            font-family: 'Inter', Arial, sans-serif;
+            padding: 40px;
+        `;
+        
+        document.body.appendChild(tempDiv);
+        
+        const opt = {
+            margin: [10, 10, 10, 10],
+            filename: `${this.data.name.replace(/\s+/g, '_')}_Professional_Portfolio.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                windowWidth: 800,
+                windowHeight: 1200
+            },
+            jsPDF: { 
+                orientation: 'portrait', 
+                unit: 'mm', 
+                format: 'a4',
+                compress: true
+            }
+        };
+        
+        await html2pdf().set(opt).from(tempDiv).save();
+        document.body.removeChild(tempDiv);
+    }
+
+    // Create professional PDF content optimized for HR
+    createProfessionalPDFContent() {
+        const currentDate = new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        return `
+        <div style="background: white; color: #333; font-family: 'Inter', Arial, sans-serif; max-width: 100%; margin: 0; padding: 0;">
+            <!-- Professional Header -->
+            <div style="text-align: center; padding: 40px 0 30px; border-bottom: 3px solid #2c3e50; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <h1 style="margin: 0; font-size: 32px; font-weight: 700; color: #2c3e50; line-height: 1.2;">
+                    ${this.escapeHtml(this.data.name || 'Your Name')}
+                </h1>
+                <p style="margin: 10px 0 0; font-size: 18px; font-weight: 600; color: #495057; text-transform: uppercase; letter-spacing: 1px;">
+                    ${this.escapeHtml(this.data.field || 'Professional Title')}
+                </p>
+            </div>
+
+            <!-- Contact Information -->
+            <div style="padding: 20px 40px; background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; font-size: 14px;">
+                    <div><strong>Email:</strong> ${this.escapeHtml(this.data.email || 'N/A')}</div>
+                    ${this.data.phone ? `<div><strong>Phone:</strong> ${this.escapeHtml(this.data.phone)}</div>` : ''}
+                    ${this.data.location ? `<div><strong>Location:</strong> ${this.escapeHtml(this.data.location)}</div>` : ''}
+                    ${this.data.linkedin ? `<div><strong>LinkedIn:</strong> ${this.escapeHtml(this.data.linkedin)}</div>` : ''}
+                    ${this.data.github ? `<div><strong>GitHub:</strong> ${this.escapeHtml(this.data.github)}</div>` : ''}
+                </div>
+            </div>
+
+            <!-- Professional Photo -->
+            ${this.data.photoData ? `
+            <div style="text-align: center; padding: 20px 0;">
+                <img src="${this.data.photoData}" alt="Professional Photo" style="width: 150px; height: 150px; border-radius: 50%; border: 4px solid #2c3e50; object-fit: cover;">
+            </div>
+            ` : ''}
+
+            <!-- About Section -->
+            ${this.data.about ? `
+            <div class="page-break-after" style="padding: 30px 40px;">
+                <h2 style="color: #2c3e50; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    PROFESSIONAL SUMMARY
+                </h2>
+                <p style="font-size: 14px; line-height: 1.6; color: #495057; text-align: justify; margin: 0;">
+                    ${this.escapeHtml(this.data.about)}
+                </p>
+            </div>
+            ` : ''}
+
+            <!-- Skills Section -->
+            ${this.data.skills ? `
+            <div class="page-break-after" style="padding: 30px 40px;">
+                <h2 style="color: #2c3e50; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    TECHNICAL SKILLS
+                </h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                    ${this.data.skills.split(',').map(skill => 
+                        `<div style="background: #e9ecef; padding: 8px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; color: #495057;">• ${this.escapeHtml(skill.trim())}</div>`
+                    ).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- Experience Section -->
+            ${this.data.experience ? `
+            <div class="page-break-after" style="padding: 30px 40px;">
+                <h2 style="color: #2c3e50; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    PROFESSIONAL EXPERIENCE
+                </h2>
+                ${this.data.experience.split('---').map(exp => {
+                    const parts = exp.split('|').map(part => part.trim());
+                    const title = parts[0] || 'Position';
+                    const company = parts[1] || 'Company';
+                    const duration = parts[2] || 'Duration';
+                    const details = parts.slice(3).join('|').trim();
+                    
+                    return `
+                    <div style="margin-bottom: 25px; page-break-inside: avoid;">
+                        <h3 style="color: #2c3e50; font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">
+                            ${this.escapeHtml(title)}
+                        </h3>
+                        <p style="color: #495057; font-size: 14px; font-weight: 600; margin: 0 0 10px 0;">
+                            ${this.escapeHtml(company)} | ${this.escapeHtml(duration)}
+                        </p>
+                        <div style="font-size: 13px; line-height: 1.5; color: #495057; white-space: pre-line;">
+                            ${this.escapeHtml(details)}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+            ` : ''}
+
+            <!-- Projects Section -->
+            ${this.data.projects ? `
+            <div class="page-break-after" style="padding: 30px 40px;">
+                <h2 style="color: #2c3e50; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    FEATURED PROJECTS
+                </h2>
+                ${this.data.projects.split('---').map(project => {
+                    const parts = project.split('|').map(part => part.trim());
+                    const name = parts[0] || 'Project';
+                    const description = parts[1] || 'Description';
+                    const link = parts[2] || '';
+                    
+                    return `
+                    <div style="margin-bottom: 20px; page-break-inside: avoid;">
+                        <h3 style="color: #2c3e50; font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">
+                            ${this.escapeHtml(name)}
+                        </h3>
+                        <p style="font-size: 13px; line-height: 1.5; color: #495057; margin: 0 0 8px 0;">
+                            ${this.escapeHtml(description)}
+                        </p>
+                        ${link ? `<p style="font-size: 12px; color: #3498db; margin: 0;">${this.escapeHtml(link)}</p>` : ''}
+                    </div>`;
+                }).join('')}
+            </div>
+            ` : ''}
+
+            <!-- Education Section -->
+            ${this.data.education ? `
+            <div class="page-break-after" style="padding: 30px 40px;">
+                <h2 style="color: #2c3e50; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    EDUCATION
+                </h2>
+                ${this.data.education.split('---').map(edu => {
+                    const parts = edu.split('|').map(part => part.trim());
+                    const degree = parts[0] || 'Degree';
+                    const institution = parts[1] || 'Institution';
+                    const years = parts[2] || 'Years';
+                    const details = parts.slice(3).join('|').trim();
+                    
+                    return `
+                    <div style="margin-bottom: 20px; page-break-inside: avoid;">
+                        <h3 style="color: #2c3e50; font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">
+                            ${this.escapeHtml(degree)}
+                        </h3>
+                        <p style="color: #495057; font-size: 14px; font-weight: 600; margin: 0 0 8px 0;">
+                            ${this.escapeHtml(institution)} | ${this.escapeHtml(years)}
+                        </p>
+                        ${details ? `<div style="font-size: 13px; line-height: 1.5; color: #495057;">${this.escapeHtml(details)}</div>` : ''}
+                    </div>`;
+                }).join('')}
+            </div>
+            ` : ''}
+
+            <!-- Certifications Section -->
+            ${this.data.certifications ? `
+            <div class="page-break-after" style="padding: 30px 40px;">
+                <h2 style="color: #2c3e50; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    CERTIFICATIONS & AWARDS
+                </h2>
+                ${this.data.certifications.split('\\n').map(cert => {
+                    const parts = cert.split('|').map(part => part.trim());
+                    const name = parts[0] || 'Certification';
+                    const issuer = parts[1] || 'Issuer';
+                    const year = parts[2] || 'Year';
+                    
+                    return `
+                    <div style="margin-bottom: 15px; page-break-inside: avoid;">
+                        <h3 style="color: #2c3e50; font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">
+                            ${this.escapeHtml(name)}
+                        </h3>
+                        <p style="color: #495057; font-size: 14px; font-weight: 600; margin: 0;">
+                            ${this.escapeHtml(issuer)} | ${this.escapeHtml(year)}
+                        </p>
+                    </div>`;
+                }).join('')}
+            </div>
+            ` : ''}
+
+            <!-- Testimonials Section -->
+            ${this.data.testimonials ? `
+            <div style="padding: 30px 40px;">
+                <h2 style="color: #2c3e50; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    PROFESSIONAL TESTIMONIALS
+                </h2>
+                ${this.data.testimonials.split('\\n').map(testimonial => {
+                    const parts = testimonial.split('-').map(part => part.trim());
+                    const quote = parts[0] || 'Testimonial';
+                    const author = parts[1] || 'Author';
+                    
+                    return `
+                    <div style="margin-bottom: 20px; page-break-inside: avoid; padding: 15px; background: #f8f9fa; border-left: 4px solid #3498db; border-radius: 4px;">
+                        <p style="font-size: 13px; line-height: 1.5; color: #495057; font-style: italic; margin: 0 0 10px 0;">
+                            "${this.escapeHtml(quote)}"
+                        </p>
+                        <p style="font-size: 14px; font-weight: 600; color: #2c3e50; margin: 0; text-align: right;">
+                            — ${this.escapeHtml(author)}
+                        </p>
+                    </div>`;
+                }).join('')}
+            </div>
+            ` : ''}
+
+            <!-- Footer -->
+            <div style="padding: 20px 40px; text-align: center; background: #f8f9fa; border-top: 1px solid #dee2e6; font-size: 12px; color: #6c757d;">
+                <p style="margin: 0;">Generated on ${currentDate} using Professional Portfolio Generator</p>
+                <p style="margin: 5px 0 0;">© ${new Date().getFullYear()} ${this.escapeHtml(this.data.name)}. All rights reserved.</p>
+            </div>
+        </div>`;
+    }
+
+    // Download HTML functionality
+    downloadHTML() {
+        const button = document.getElementById('downloadHTML');
+        const originalText = button.innerHTML;
+        
+        try {
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating HTML...';
+
+            // Create standalone HTML
+            const htmlContent = this.generateStandaloneHTML();
+            
+            // Create download link
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${this.data.name.replace(/\s+/g, '_')}_Portfolio.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            this.showNotification('HTML file downloaded successfully!', 'success');
+
+        } catch (error) {
+            console.error('HTML generation error:', error);
+            this.showNotification('Error generating HTML. Please try again.', 'error');
+        } finally {
+            // Reset button
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+
+    // Generate standalone HTML
+    generateStandaloneHTML() {
+        const currentDate = new Date().toLocaleDateString();
+        
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${this.escapeHtml(this.data.name)} - Professional Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --accent-color: #4a90e2;
+            --text-primary: #2c3e50;
+            --text-secondary: #64748b;
+            --text-muted: #9ca3af;
+            --bg-white: #ffffff;
+            --bg-light: #f8fafc;
+            --bg-gray: #f1f5f9;
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-light);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .portfolio-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        .page-content {
+            padding: 60px;
+            position: relative;
+        }
+
+        .header {
+            background: var(--bg-light);
+            padding: 40px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            border: 1px solid var(--border-light);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .header-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--border-medium);
+            flex-shrink: 0;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .header-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .header-info h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .professional-title {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 0;
+            align-items: center;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .contact-item i {
+            color: var(--text-muted);
+            width: 16px;
+            font-size: 14px;
+        }
+
+        .section {
+            margin-bottom: 48px;
+        }
+
+        .section h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .about-content {
+            background: var(--bg-light);
+            padding: 24px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        .skills-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 0;
+        }
+
+        .skill-item {
+            background: var(--bg-white);
+            border: 1px solid var(--border-medium);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 32px;
+            border-left: 2px solid var(--border-light);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 8px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-color);
+        }
+
+        .timeline-item:last-child {
+            border-left-color: transparent;
+        }
+
+        .timeline-item h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .timeline-meta {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .timeline-item p {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        .timeline-item strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .project-item {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .project-item:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .project-item h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .project-tech {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+
+        .project-item p {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .project-link:hover {
+            color: var(--primary-color);
+        }
+
+        .education-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .education-left {
+            flex: 1;
+        }
+
+        .education-right {
+            flex: 1;
+            text-align: right;
+        }
+
+        .education-degree {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .education-school {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .education-details {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .certification-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .certification-item:last-child {
+            border-bottom: none;
+        }
+
+        .certification-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .certification-details {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .testimonial-item {
+            background: var(--bg-light);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--accent-color);
+            position: relative;
+        }
+
+        .testimonial-item::before {
+            content: '"';
+            font-size: 48px;
+            color: var(--border-light);
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            font-family: Georgia, serif;
+            opacity: 0.3;
+        }
+
+        .testimonial-item p {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .social-links {
+            display: none;
+        }
+
+        @media print {
+            body { background: white; }
+            .portfolio-container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="portfolio-container">
+        <div class="page-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    ${this.data.photoData ? `
+                    <div class="header-photo">
+                        <img src="${this.data.photoData}" alt="Professional Photo">
+                    </div>` : ''}
+                    <div class="header-info">
+                        <h1>${this.escapeHtml(this.data.name)}</h1>
+                        <p class="professional-title">${this.escapeHtml(this.data.field)}</p>
+                        
+                        <div class="contact-info">
+                            <div class="contact-item">
+                                <i class="fas fa-envelope"></i>
+                                <span>${this.escapeHtml(this.data.email)}</span>
+                            </div>
+                            ${this.data.phone ? `
+                            <div class="contact-item">
+                                <i class="fas fa-phone"></i>
+                                <span>${this.escapeHtml(this.data.phone)}</span>
+                            </div>` : ''}
+                            ${this.data.location ? `
+                            <div class="contact-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${this.escapeHtml(this.data.location)}</span>
+                            </div>` : ''}
+                            ${this.data.linkedin ? `
+                            <div class="contact-item">
+                                <i class="fab fa-linkedin"></i>
+                                <span>${this.escapeHtml(this.data.linkedin)}</span>
+                            </div>` : ''}
+                            ${this.data.github ? `
+                            <div class="contact-item">
+                                <i class="fab fa-github"></i>
+                                <span>${this.escapeHtml(this.data.github)}</span>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Professional Summary Section -->
+            ${this.data.about ? `
+            <section class="section">
+                <h2>Professional Summary</h2>
+                <div class="about-content">
+                    ${this.escapeHtml(this.data.about)}
+                </div>
+            </section>` : ''}
+
+            <!-- Core Skills Section -->
+            ${this.data.skills ? `
+            <section class="section">
+                <h2>Core Skills</h2>
+                <div class="skills-grid">
+                    ${this.data.skills.split(',').map(skill => 
+                        `<div class="skill-item">${this.escapeHtml(skill.trim())}</div>`
+                    ).join('')}
+                </div>
+            </section>` : ''}
+
+            <!-- Experience Section -->
+            ${this.data.experience ? `
+            <section class="section">
+                <h2>Experience</h2>
+                <div>
+                    ${this.data.experience.split('---').map(exp => {
+                        const lines = exp.split('\n').filter(line => line.trim());
+                        const titleLine = lines[0] || '';
+                        const titleParts = titleLine.split('|').map(part => part.trim());
+                        
+                        const title = titleParts[0] || 'Position';
+                        const company = titleParts[1] || 'Company';
+                        const duration = titleParts[2] || 'Duration';
+                        const details = lines.slice(1).filter(line => line.trim().startsWith('•'));
+                        
+                        return `
+                        <div class="timeline-item">
+                            <h3>${this.escapeHtml(title)}</h3>
+                            <div class="timeline-meta">${this.escapeHtml(company)} | ${this.escapeHtml(duration)}</div>
+                            <div>${details.map(point => `<p>${this.escapeHtml(point)}</p>`).join('')}</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </section>` : ''}
+
+            <!-- Projects Section -->
+            ${this.data.projects ? `
+            <section class="section">
+                <h2>Projects</h2>
+                <div>
+                    ${this.data.projects.split('---').map(proj => {
+                        const lines = proj.split('\n').filter(line => line.trim());
+                        const titleLine = lines[0] || '';
+                        const titleParts = titleLine.split('|').map(part => part.trim());
+                        
+                        const title = titleParts[0] || 'Project';
+                        const tech = titleParts[1] || 'Description';
+                        const link = titleParts[2] || '';
+                        const bulletPoints = lines.slice(1).filter(line => line.trim().startsWith('•'));
+                        
+                        return `
+                        <div class="project-item">
+                            <h3>${this.escapeHtml(title)}</h3>
+                            <div class="project-tech">${this.escapeHtml(tech)}</div>
+                            <div>${bulletPoints.map(point => `<p>${this.escapeHtml(point)}</p>`).join('')}</div>
+                            ${link ? `<a href="${link}" target="_blank" class="project-link">
+                                <i class="fas fa-external-link-alt"></i> Live Demo
+                            </a>` : ''}
+                        </div>`;
+                    }).join('')}
+                </div>
+            </section>` : ''}
+
+            <!-- Education Section -->
+            ${this.data.education ? `
+            <section class="section">
+                <h2>Education</h2>
+                <div>
+                    ${this.data.education.split('---').map(edu => {
+                        const lines = edu.split('\n').filter(line => line.trim());
+                        const titleLine = lines[0] || '';
+                        const titleParts = titleLine.split('|').map(part => part.trim());
+                        
+                        const degree = titleParts[0] || 'Degree';
+                        const institution = titleParts[1] || 'Institution';
+                        const years = titleParts[2] || 'Years';
+                        const details = lines.slice(1).filter(line => line.trim().startsWith('•'));
+                        
+                        return `
+                        <div class="education-item">
+                            <div class="education-left">
+                                <div class="education-degree">${this.escapeHtml(degree)}</div>
+                                <div class="education-school">${this.escapeHtml(institution)}</div>
+                            </div>
+                            <div class="education-right">
+                                <div class="education-details">${this.escapeHtml(years)}</div>
+                                ${details.length > 0 ? `<div class="education-details">${details.map(detail => `<div>${this.escapeHtml(detail)}</div>`).join('')}</div>` : ''}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </section>` : ''}
+
+            <!-- Certifications Section -->
+            ${this.data.certifications ? `
+            <section class="section">
+                <h2>Certifications</h2>
+                <div>
+                    ${this.data.certifications.split('---').map(cert => {
+                        const lines = cert.split('\n').filter(line => line.trim());
+                        const titleLine = lines[0] || '';
+                        const titleParts = titleLine.split('|').map(part => part.trim());
+                        
+                        const name = titleParts[0] || 'Certification';
+                        const issuer = titleParts[1] || 'Issuer';
+                        const year = titleParts[2] || 'Year';
+                        
+                        return `
+                        <div class="certification-item">
+                            <div class="certification-name">${this.escapeHtml(name)}</div>
+                            <div class="certification-details">${this.escapeHtml(issuer)} | ${this.escapeHtml(year)}</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </section>` : ''}
+
+            <!-- Testimonials Section -->
+            ${this.data.testimonials ? `
+            <section class="section">
+                <h2>Testimonials</h2>
+                <div>
+                    ${this.data.testimonials.split('---').map(testimonial => {
+                        const lines = testimonial.split('\n').filter(line => line.trim());
+                        const titleLine = lines[0] || '';
+                        const titleParts = titleLine.split('|').map(part => part.trim());
+                        
+                        const quote = titleParts[0] || 'Quote';
+                        const author = titleParts[1] || 'Author';
+                        
+                        return `
+                        <div class="testimonial-item">
+                            <p>${this.escapeHtml(quote)}</p>
+                            <div class="testimonial-author">— ${this.escapeHtml(author)}</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </section>` : ''}
+        </div>
+    </div>
+</body>
+</html>`;
+    }
+
+    // Ensure sections are visible
+    ensureSectionsVisible() {
+        const sections = ['about', 'skills', 'experience', 'projects', 'education', 'certifications', 'testimonials'];
+        sections.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                const hasContent = this.hasSectionContent(sectionId);
+                if (hasContent) {
+                    section.style.display = 'block';
+                    console.log(`Showing section: ${sectionId}`);
+                } else {
+                    console.log(`No content for section: ${sectionId}`);
+                }
+            }
+        });
+    }
+
+    // Check if section has content
+    hasSectionContent(sectionId) {
+        switch(sectionId) {
+            case 'about': return this.data.about && this.data.about.trim().length > 0;
+            case 'skills': return this.data.skills && this.data.skills.trim().length > 0;
+            case 'experience': return this.data.experience && this.data.experience.trim().length > 0;
+            case 'projects': return this.data.projects && this.data.projects.trim().length > 0;
+            case 'education': return this.data.education && this.data.education.trim().length > 0;
+            case 'certifications': return this.data.certifications && this.data.certifications.trim().length > 0;
+            case 'testimonials': return this.data.testimonials && this.data.testimonials.trim().length > 0;
+            default: return false;
+        }
+    }
+
+    // Show notification
+    showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: ${type === 'success' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 
+                       type === 'error' ? 'linear-gradient(135deg, #f093fb, #f5576c)' : 
+                       'linear-gradient(135deg, #4facfe, #00f2fe)'};
+            color: white;
+            border-radius: 12px;
+            font-weight: 600;
+            z-index: 10000;
+            animation: slideInRight 0.5s ease, slideOutRight 0.5s ease 2.5s forwards;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 300px;
+        `;
+        notification.textContent = message;
+        
+        // Add animation styles if not already present
+        if (!document.querySelector('#notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-styles';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+}
+
+// Initialize the portfolio when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new ProfessionalPortfolio();
+});
+
+    // Ensure sections are visible
+    ensureSectionsVisible() {
+        const sections = ['about', 'skills', 'experience', 'projects', 'education', 'certifications', 'testimonials'];
+        sections.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                const hasContent = this.hasSectionContent(sectionId);
+                if (hasContent) {
+                    section.style.display = 'block';
+                    console.log(`Showing section: ${sectionId}`);
+                } else {
+                    console.log(`No content for section: ${sectionId}`);
+                }
+            }
+        });
+    }
+
+    // Check if section has content
+    hasSectionContent(sectionId) {
+        switch(sectionId) {
+            case 'about': return this.data.about && this.data.about.trim().length > 0;
+            case 'skills': return this.data.skills && this.data.skills.trim().length > 0;
+            case 'experience': return this.data.experience && this.data.experience.trim().length > 0;
+            case 'projects': return this.data.projects && this.data.projects.trim().length > 0;
+            case 'education': return this.data.education && this.data.education.trim().length > 0;
+            case 'certifications': return this.data.certifications && this.data.certifications.trim().length > 0;
+            case 'testimonials': return this.data.testimonials && this.data.testimonials.trim().length > 0;
+            default: return false;
+        }
+    }
+
+    // Show notification
+    showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: ${type === 'success' ? 'linear-gradient(135deg, #667eea, #764ba2)' :
+                       type === 'error' ? 'linear-gradient(135deg, #f093fb, #f5576c)' :
+                       'linear-gradient(135deg, #4facfe, #00f2fe)'};
+            color: white;
+            border-radius: 12px;
+            font-weight: 600;
+            z-index: 10000;
+            animation: slideInRight 0.5s ease, slideOutRight 0.5s ease 2.5s forwards;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 300px;
+        `;
+        notification.textContent = message;
+        
+        // Add animation styles if not already present
+        if (!document.querySelector('#notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-styles';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+}
+
+// Initialize the portfolio when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new ProfessionalPortfolio();
+});

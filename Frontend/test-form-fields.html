@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Form Fields</title>
+</head>
+<body>
+    <h1>Testing Form Field Changes</h1>
+    <iframe src="form.html" width="100%" height="600"></iframe>
+    
+    <script>
+        // Test if basic fields are removed and user info display is present
+        setTimeout(() => {
+            const iframe = document.querySelector('iframe');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            // Check that basic fields are removed
+            const removedFields = ['name', 'email', 'field'];
+            const stillPresentFields = [];
+            
+            removedFields.forEach(fieldId => {
+                const field = iframeDoc.getElementById(fieldId);
+                if (field) {
+                    stillPresentFields.push(fieldId);
+                } else {
+                    console.log(`✓ Field ${fieldId} successfully removed`);
+                }
+            });
+            
+            // Check that user info display is present
+            const userInfoDisplay = iframeDoc.getElementById('userInfoDisplay');
+            const displayName = iframeDoc.getElementById('displayName');
+            const displayEmail = iframeDoc.getElementById('displayEmail');
+            const displayField = iframeDoc.getElementById('displayField');
+            
+            let userInfoStatus = '';
+            if (userInfoDisplay && displayName && displayEmail && displayField) {
+                userInfoStatus = '✓ User info display section is present';
+                console.log(userInfoStatus);
+            } else {
+                userInfoStatus = '✗ User info display section is missing';
+                console.error(userInfoStatus);
+            }
+            
+            // Summary
+            if (stillPresentFields.length > 0) {
+                console.error('Fields that should have been removed:', stillPresentFields);
+                alert('Some fields that should have been removed are still present: ' + stillPresentFields.join(', '));
+            } else {
+                console.log('All basic fields successfully removed!');
+                console.log(userInfoStatus);
+                alert('Form updated successfully! Basic fields removed and user info display added.');
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!--
+  portfolio.html
+  Purpose:
+  - Final step of the flow: index.html -> form.html -> portfolio.html
+  - Displays the generated portfolio using data loaded by portfolio-script.js
+  - Includes an action bar (Download HTML + Back to Home)
+  - Sections are initially hidden and are shown only when data exists
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /*
+          Inline CSS is used so this page is fully self-styled.
+          Color variables are defined under :root for easy theme adjustments.
+        */
+        :root {
+            --primary-color: #1e3a8a;
+            --accent-color: #4a90e2;
+            --text-primary: #2c3e50;
+            --text-secondary: #64748b;
+            --text-muted: #9ca3af;
+            --bg-white: #ffffff;
+            --bg-light: #f8fafc;
+            --bg-gray: #f1f5f9;
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+            --card-bg: var(--bg-white);
+            --border-color: var(--border-light);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Page background and default typography */
+        body {
+            background: var(--bg-light);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        /* Portfolio container: white card that holds all sections */
+        .portfolio-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            background: var(--bg-white);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        .page-content {
+            padding: 60px;
+            position: relative;
+        }
+
+        /* Action bar (fixed): Download HTML + Back button */
+        .action-bar {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: var(--bg-white);
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: var(--accent-color);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-medium);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-light);
+            border-color: var(--accent-color);
+            color: var(--primary-color);
+        }
+
+        /* Header section: photo + name + title + contact info */
+        .header {
+            background: var(--bg-light);
+            padding: 40px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            border: 1px solid var(--border-light);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .header-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--border-medium);
+            flex-shrink: 0;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .header-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .header-info h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .professional-title {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .contact-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 0;
+            align-items: center;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .contact-item i {
+            color: var(--text-muted);
+            width: 16px;
+            font-size: 14px;
+        }
+
+        .social-links {
+            display: none;
+        }
+
+        /* Section styles: used for each major portfolio area */
+        .section {
+            margin-bottom: 48px;
+        }
+
+        .section h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .section-content {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .about-content {
+            background: var(--bg-light);
+            padding: 24px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* Skills: rendered as small tag/pill elements */
+        .skills-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 0;
+        }
+
+        .skill-item {
+            background: var(--bg-white);
+            border: 1px solid var(--border-medium);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .skill-item:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Timeline items: used by experience entries */
+        .timeline-item {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 32px;
+            border-left: 2px solid var(--border-light);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 8px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-color);
+        }
+
+        .timeline-item:last-child {
+            border-left-color: transparent;
+        }
+
+        .timeline-item h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .timeline-meta {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .timeline-item p {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        .timeline-item strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Projects: each project is displayed in a bordered card */
+        .project-item {
+            background: var(--bg-white);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .project-item:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .project-item h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .project-tech {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+
+        .project-item p {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .project-link:hover {
+            color: var(--primary-color);
+        }
+
+        /* Education */
+        .education-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .education-left {
+            flex: 1;
+        }
+
+        .education-right {
+            flex: 1;
+            text-align: right;
+        }
+
+        .education-degree {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .education-school {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .education-details {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Certifications */
+        .certification-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .certification-item:last-child {
+            border-bottom: none;
+        }
+
+        .certification-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .certification-details {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Testimonials */
+        .testimonial-item {
+            background: var(--bg-light);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--accent-color);
+            position: relative;
+        }
+
+        .testimonial-item::before {
+            content: '"';
+            font-size: 48px;
+            color: var(--border-light);
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            font-family: Georgia, serif;
+            opacity: 0.3;
+        }
+
+        .testimonial-item p {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Ensure sections are visible when they have content */
+        .section[style*="display: block"] {
+            display: block !important;
+        }
+
+        /* Fix for section visibility */
+        main {
+            width: 100%;
+        }
+
+        main > .section,
+        main > .two-column-layout > .section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out both;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 40px;
+            }
+
+            .header-photo {
+                margin: 0 auto;
+            }
+
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .wrapper {
+                padding: 20px 15px;
+            }
+
+            .header {
+                padding: 40px 30px;
+            }
+
+            .section {
+                padding: 30px 20px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .export-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn-export {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 30px 20px;
+            }
+
+            .section {
+                padding: 25px 15px;
+            }
+
+            .skills-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Print Styles - Professional HR-Friendly */
+        @media print {
+            body {
+                background: white !important;
+                color: #333 !important;
+                font-size: 12pt;
+                line-height: 1.4;
+                margin: 0 !important;
+                padding: 20px !important;
+                overflow: visible !important;
+            }
+
+            /* Hide action bar and interactive elements */
+            .action-bar {
+                display: none !important;
+            }
+
+            body::before {
+                display: none !important;
+            }
+
+            /* A4 Page layout for print */
+            .portfolio-container {
+                display: block !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                background: white !important;
+                box-shadow: none !important;
+            }
+
+            .a4-page {
+                width: 210mm !important;
+                min-height: 297mm !important;
+                max-height: 297mm !important;
+                background: white !important;
+                box-shadow: none !important;
+                border: 1px solid #e0e0e0 !important;
+                border-radius: 0 !important;
+                margin: 0 0 20px 0 !important;
+                page-break-after: always !important;
+                overflow: visible !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            .a4-page:last-child {
+                page-break-after: auto !important;
+            }
+
+            .a4-page::before {
+                display: none !important;
+            }
+
+            .page-content {
+                padding: 15px !important;
+                flex: 1 !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+
+            /* Clean header for print */
+            .header {
+                background: white !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 0 20px 0 !important;
+                margin-bottom: 20px !important;
+                text-align: center !important;
+            }
+
+            .header-content {
+                justify-content: center !important;
+                text-align: center !important;
+            }
+
+            .header-info {
+                text-align: center !important;
+            }
+
+            .header h1 {
+                color: #2c3e50 !important;
+                font-size: 24pt !important;
+                font-weight: 700 !important;
+                margin-bottom: 5pt !important;
+            }
+
+            .professional-title {
+                color: #495057 !important;
+                font-size: 16pt !important;
+                text-transform: uppercase !important;
+                letter-spacing: 1pt !important;
+                font-weight: 600 !important;
+                margin-bottom: 15pt !important;
+            }
+
+            /* Contact information */
+            .contact-info {
+                justify-content: center !important;
+                margin-bottom: 10pt !important;
+            }
+
+            .contact-item {
+                font-size: 11pt !important;
+                color: #495057 !important;
+            }
+
+            /* Clean sections for print */
+            .section {
+                background: white !important;
+                border: none !important;
+                box-shadow: none !important;
+                page-break-inside: avoid;
+                margin-bottom: 20pt !important;
+                padding: 0 !important;
+            }
+
+            .section h2 {
+                font-size: 16pt !important;
+                border-bottom: 2px solid #2c3e50 !important;
+                padding-bottom: 5pt !important;
+                margin-bottom: 15pt !important;
+                color: #2c3e50 !important;
+                font-weight: 700 !important;
+                text-align: left !important;
+            }
+
+            .section h2 i {
+                display: none !important;
+            }
+
+            /* About content */
+            .about-content {
+                font-size: 11pt !important;
+                line-height: 1.4 !important;
+                color: #495057 !important;
+                text-align: justify !important;
+                margin-bottom: 15pt !important;
+            }
+
+            /* Skills grid */
+            .skills-grid {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 5pt !important;
+                margin-bottom: 15pt !important;
+            }
+
+            .skill-item {
+                background: #f8f9fa !important;
+                border: 1px solid #dee2e6 !important;
+                padding: 4pt 8pt !important;
+                font-size: 10pt !important;
+                color: #495057 !important;
+                border-radius: 3pt !important;
+            }
+
+            /* Timeline items */
+            .timeline-item {
+                background: white !important;
+                border-left: 3px solid #2c3e50 !important;
+                padding: 0 0 15pt 10pt !important;
+                margin-bottom: 15pt !important;
+                page-break-inside: avoid;
+                border-bottom: 1px solid #dee2e6 !important;
+            }
+
+            .timeline-item:last-child {
+                border-bottom: none !important;
+            }
+
+            .timeline-item h3 {
+                color: #2c3e50 !important;
+                font-size: 14pt !important;
+                font-weight: 600 !important;
+                margin-bottom: 3pt !important;
+            }
+
+            .timeline-meta {
+                color: #6c757d !important;
+                font-size: 10pt !important;
+                font-weight: 600 !important;
+                font-style: italic !important;
+                margin-bottom: 8pt !important;
+            }
+
+            .timeline-item p {
+                color: #495057 !important;
+                font-size: 11pt !important;
+                line-height: 1.4 !important;
+                margin: 0 !important;
+            }
+
+            /* Testimonials */
+            .testimonial-item {
+                background: #f8f9fa !important;
+                border-left: 3px solid #2c3e50 !important;
+                padding: 10pt !important;
+                margin-bottom: 15pt !important;
+                page-break-inside: avoid;
+                border-radius: 3pt !important;
+            }
+
+            .testimonial-item p {
+                color: #495057 !important;
+                font-size: 11pt !important;
+                font-style: italic !important;
+                line-height: 1.4 !important;
+                margin-bottom: 8pt !important;
+            }
+
+            .testimonial-author {
+                color: #2c3e50 !important;
+                font-size: 10pt !important;
+                font-weight: 600 !important;
+                text-align: right !important;
+                margin: 0 !important;
+            }
+
+            /* Professional photo */
+            .header-photo {
+                width: 80pt !important;
+                height: 80pt !important;
+                border: 2px solid #2c3e50 !important;
+                margin: 0 auto 10pt auto !important;
+                display: block !important;
+            }
+
+            /* Social links */
+            .social-links {
+                display: none !important;
+            }
+
+            /* Two column layout for print */
+            .two-column-layout {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 20pt !important;
+                margin-bottom: 20pt !important;
+            }
+
+            /* Ensure content is visible */
+            .section[style*="display: none"] {
+                display: block !important;
+            }
+
+            /* Remove all animations and transitions */
+            * {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+                box-shadow: none !important;
+            }
+
+            /* Professional margins */
+            @page {
+                margin: 10mm;
+                size: A4;
+            }
+
+            @page :first {
+                margin-top: 15mm;
+            }
+
+            /* Hide empty sections */
+            .section:empty {
+                display: none !important;
+            }
+
+            /* Ensure proper text wrapping */
+            * {
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+            }
+
+            /* Optimize for multi-page layout */
+            .a4-page {
+                page-break-after: always !important;
+            }
+
+            .a4-page:last-child {
+                page-break-after: auto !important;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .portfolio-container {
+                margin: 10px;
+            }
+
+            .wrapper {
+                padding: 20px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header-info {
+                text-align: center;
+            }
+
+            .contact-info {
+                justify-content: center;
+            }
+
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .action-bar {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<!-- Action Bar -->
+<div class="action-bar">
+    <button id="downloadHTML" class="btn btn-secondary">
+        <i class="fas fa-code"></i>
+        Download HTML
+    </button>
+    <a href="index.html" class="btn btn-secondary">
+        <i class="fas fa-home"></i>
+        Back to Home
+    </a>
+</div>
+
+<div class="portfolio-container">
+    <!-- Single Page: All Sections -->
+    <div class="a4-page">
+        <div class="page-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <div class="header-photo" id="headerPhoto" style="display: none;">
+                        <img id="photoImg" src="" alt="Professional Photo">
+                    </div>
+                    <div class="header-info">
+                        <h1 id="name">Loading...</h1>
+                        <p class="professional-title" id="field">Loading...</p>
+
+                        <div class="contact-info">
+                            <div class="contact-item" id="emailItem">
+                                <i class="fas fa-envelope"></i>
+                                <span id="email">Loading...</span>
+                            </div>
+                            <div class="contact-item" id="phoneItem" style="display: none;">
+                                <i class="fas fa-phone"></i>
+                                <span id="phone">Loading...</span>
+                            </div>
+                            <div class="contact-item" id="locationItem" style="display: none;">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span id="location">Loading...</span>
+                            </div>
+                            <div class="contact-item" id="linkedinItem" style="display: none;">
+                                <i class="fab fa-linkedin"></i>
+                                <span id="linkedin">Loading...</span>
+                            </div>
+                            <div class="contact-item" id="githubItem" style="display: none;">
+                                <i class="fab fa-github"></i>
+                                <span id="github">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Professional Summary Section -->
+            <section class="section" id="about" style="display: none;">
+                <h2>Professional Summary</h2>
+                <div class="about-content" id="aboutContent"></div>
+            </section>
+
+            <!-- Core Skills Section -->
+            <section class="section" id="skills" style="display: none;">
+                <h2>Core Skills</h2>
+                <div class="skills-grid" id="skillsList"></div>
+            </section>
+
+            <!-- Experience Section -->
+            <section class="section" id="experience" style="display: none;">
+                <h2>Experience</h2>
+                <div id="experienceList"></div>
+            </section>
+
+            <!-- Projects Section -->
+            <section class="section" id="projects" style="display: none;">
+                <h2>Projects</h2>
+                <div id="projectsList"></div>
+            </section>
+
+            <!-- Education Section -->
+            <section class="section" id="education" style="display: none;">
+                <h2>Education</h2>
+                <div id="educationList"></div>
+            </section>
+
+            <!-- Certifications Section -->
+            <section class="section" id="certifications" style="display: none;">
+                <h2>Certifications</h2>
+                <div id="certificationsList"></div>
+            </section>
+
+            <!-- Testimonials Section -->
+            <section class="section" id="testimonials" style="display: none;">
+                <h2>Testimonials</h2>
+                <div id="testimonialsList"></div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="portfolio-script.js"></script>
+</body>
+</html>
